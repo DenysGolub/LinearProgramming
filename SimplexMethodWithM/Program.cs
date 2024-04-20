@@ -1,3 +1,5 @@
+using WinFormsApp1;
+
 namespace SimplexMethodWithM
 {
     internal static class Program

@@ -5,6 +5,7 @@ namespace ConsoleApp1
     {
         static void Main(string[] args)
         {
+
             Fraction a = new Fraction(1,5);
             Fraction b = new Fraction(2,1);
 
