@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="ConsoleApp1.NewSimplex">
+    <Position X="1" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACBAAAEBAEAAACAICIAACRAAFAEAAAAAABA=</HashCode>
+      <FileName>NewSimplex.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Mehroz.Fraction">
+    <Position X="4.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAIAIAAAAAgAAQAE4QeBAgAAAgAAIIAAIBAkAggAB6A=</HashCode>
+      <FileName>FractionClass.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Mehroz.FractionException">
+    <Position X="7.25" Y="1.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>FractionClass.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

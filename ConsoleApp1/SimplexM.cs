@@ -1,10 +1,12 @@
 ﻿using Mehroz;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ConsoleApp1
@@ -17,17 +19,9 @@ namespace ConsoleApp1
 4 рядок     -     0  -3    -7  0   0   0
 5 рядок     -     0   0    0   0   0   0
 */
-    internal class Simplex
+    internal class SimplexM
     {
 
-        object[,] test_array =
-        {
-            {"", "", "", "P1", "P2", "P3", "P4", "P5"},
-            {"Базис", "Сб", "P0", "5", "-2", "0", "0", "0"},
-            { "P3", new Fraction(0,1), new Fraction(6,1), new Fraction(2,1), new Fraction(-1,1), new Fraction(1,1), new Fraction(0,1), new Fraction(0,1)},
-            { "P4", new Fraction(0,1), new Fraction(3,1), new Fraction(-1,1), new Fraction(3, 1), new Fraction(0,1), new Fraction(1,1), new Fraction(0,1)},
-            { "P5", new Fraction(0,1), new Fraction(8, 1), new Fraction(1,1), new Fraction(2,1), new Fraction(0,1), new Fraction(0,1), new Fraction(1,1)}
-        };
 
         private bool isOptimalMax(Dictionary<string, Fraction> fourth_row)
         {
@@ -54,51 +48,65 @@ namespace ConsoleApp1
             return true;
         }
 
-        public void Solve(bool isMax=true)
+        public void Solve(object[,] test_array, Dictionary<string, Fraction> coeff, List<string> artifical_variables, bool isMaxF = true)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            var coeff = new Dictionary<string, Fraction>()
-            {
-                {"P0", new Fraction(0,1) },
-                {"P1", new Fraction(5,1) },
-                {"P2", new Fraction(-2,1) },
-                {"P3", new Fraction(0,1) },
-                {"P4", new Fraction(0,1) },
-                {"P5", new Fraction(0,1) }
-            };
-
-            var basis = new Dictionary<string, Fraction>()
-            {
-
-            };
+            
+            var basis = new List<string>();
             int iter = 1;
-            var fourth_row = new Dictionary<string, Fraction>();
+            var number_row = new Dictionary<string, Fraction>();
+            var M_row = new Dictionary<string, Fraction>();
+
+            bool IsMInBasis = false;
             Console.WriteLine(new string('-', 80));
             Console.WriteLine("Ітерація №{0}", iter++);
             Console.WriteLine(new string('-', 80));
             PrintMatrix(test_array);
 
-            while (!BasisMultiplyOnVectors(test_array, coeff, ref fourth_row))
+            foreach (var b in basis)
+            {
+                if (Regex.IsMatch(b, @".*M"))
+                {
+                    IsMInBasis = true;
+                    break;
+                }
+                else
+                {
+                    IsMInBasis = false;
+                }
+            }
+
+
+            while (!BasisMultiplyOnVectors(test_array, coeff, ref number_row, ref M_row, basis, artifical_variables, IsM: IsMInBasis, isMax:isMaxF))
             {
                 Console.WriteLine(new string('-', 80));
                 Console.WriteLine("Ітерація №{0}", iter++);
                 Console.WriteLine(new string('-', 80));
                 PrintMatrix(test_array);
+
+                foreach (var b in basis)
+                {
+                    if (Regex.IsMatch(b, @".*M"))
+                    {
+                        IsMInBasis = true;
+                        break;
+                    }
+                    else
+                    {
+                        IsMInBasis = false;
+                    }
+                }
+
             }
-          
         }
 
-        private bool BasisMultiplyOnVectors(object[,] table, Dictionary<string, Fraction> P_coefficients, ref Dictionary<string, Fraction> fourth_row, bool IsM = false, bool isMax=true)
+        private bool BasisMultiplyOnVectors(object[,] table, Dictionary<string, Fraction> P_coefficients, ref Dictionary<string, Fraction> number_row, ref Dictionary<string, Fraction> M_row, List<string> basis, List<string> art_var, bool IsM = false, bool isMax=true)
         {
             
             if(IsM)
             {
-
-            }
-            else if(!IsM)
-            {
                 int p_count = 0;
-                fourth_row = new Dictionary<string, Fraction>();
+                M_row = new Dictionary<string, Fraction>();
                 for (int columns = 2; columns < table.GetLength(1); columns++)
                 {
                     Fraction scalar_product = new Fraction();
@@ -111,19 +119,57 @@ namespace ConsoleApp1
 
                     if (p_count > 0)
                     {
-                        fourth_row.Add($"P{p_count - 1}", scalar_product);
+                        M_row.Add($"P{p_count - 1}", scalar_product);
                     }
                     //Console.WriteLine(scalar_product);
 
                 }
 
-                if (isMax && isOptimalMax(fourth_row) || (!isMax && isOptimalMin(fourth_row)))
+                string new_basis_vector = GetVectorThatGoesToBasis(M_row);
+                //PrintMatrix(table);
+
+
+                int removing_vector_row = (GetVectorThatRemovesFromBasis(table, new_basis_vector, out string vector));
+
+                Console.WriteLine($"З базису виводиться вектор {vector}\nУ базис вводиться вектор {new_basis_vector}");
+
+                //PrintMatrix(table);
+                Gauss(table, removing_vector_row, int.Parse(new_basis_vector.Substring(1)), new_basis_vector, P_coefficients);
+                FillBasisArray(table, basis, art_var);
+
+            }
+            else if(!IsM)
+            {
+                //DropColumn(ref table, art_var);
+                int p_count = 0;
+                number_row = new Dictionary<string, Fraction>();
+                for (int columns = 2; columns < table.GetLength(1); columns++)
                 {
+                    Fraction scalar_product = new Fraction();
+                    for (int rows = 2; rows < table.GetLength(0); rows++)
+                    {
+                        //Console.WriteLine((table[rows, columns] as Fraction).ToString());
+                        scalar_product += (table[rows, columns] as Fraction) * (table[rows, 1] as Fraction);
+                    }
+                    scalar_product -= P_coefficients[$"P{p_count++}"];
+
+                    if (p_count > 0)
+                    {
+                        number_row.Add($"P{p_count - 1}", scalar_product);
+                    }
+                    //Console.WriteLine(scalar_product);
+
+                }
+
+                if (isMax && isOptimalMax(number_row) || (!isMax && isOptimalMin(number_row)))
+                {
+                    Console.WriteLine(new string('-', 80));
+                    PrintMatrix(table);
                     Console.WriteLine("Оптимальний план знайдено.");
                     return true;
                 }
                 
-                string new_basis_vector = GetVectorThatGoesToBasis(fourth_row, isMax);
+                string new_basis_vector = GetVectorThatGoesToBasis(number_row, isMax);
                 //PrintMatrix(table);
 
                 
@@ -134,6 +180,58 @@ namespace ConsoleApp1
                 Gauss(table,removing_vector_row, int.Parse(new_basis_vector.Substring(1)), new_basis_vector, P_coefficients);
             }
             return false;
+        }
+
+        private void DropColumn(ref object[,] array, List<string> art_var)
+        {
+            for(int column = 0; column<array.GetLength(1); column++)
+            {
+                if (art_var.Contains(array[0, column]))
+                {
+                    DropColumn(ref array, column);
+                }
+            }
+        }
+
+        static void DropColumn(ref object[,] array, int columnIndex)
+        {
+            // Get the lengths of the original array
+            int rows = array.GetLength(0);
+            int cols = array.GetLength(1);
+
+            // Create a new array with one less column
+            object[,] newArray = new object[rows, cols - 1];
+
+            // Copy elements from the original array to the new array
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0, k = 0; j < cols; j++)
+                {
+                    if (j != columnIndex)
+                    {
+                        newArray[i, k] = array[i, j];
+                        k++;
+                    }
+                }
+            }
+            array = newArray;
+        }
+
+        private void FillBasisArray(object[,] table, List<string> basis, List<string> art_var)
+        {
+            basis.Clear();
+            for(int row = 2; row< table.GetLength(0); row++)
+            {
+                if (art_var.Contains(table[row, 0] as string))
+                {
+                    basis.Add(table[row, 0] as string + "M");
+
+                }
+                else
+                {
+                    basis.Add(table[row, 0] as string);
+                }
+            }
         }
 
         private string GetVectorThatGoesToBasis(Dictionary<string, Fraction> fourth_row, bool isMax=true)
@@ -159,7 +257,7 @@ namespace ConsoleApp1
                 Fraction abs_max = new Fraction();
                 foreach (var kvp in fourth_row)
                 {
-                    if (kvp.Value.ToDouble() > abs_max.ToDouble())
+                    if (kvp.Value >0 && kvp.Value.ToDouble() >= abs_max && kvp.Key != "P0")
                     {
                         abs_max = kvp.Value;
                         vector = kvp.Key;
